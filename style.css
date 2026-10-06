@@ -1,0 +1,141 @@
+/* Basic reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    color: white;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#game-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+header {
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0,0,0,0.3);
+}
+
+header h1 {
+    font-size: 1.5rem;
+}
+
+#score, #accuracy {
+    font-size: 1rem;
+}
+
+main {
+    flex: 1;
+    display: flex;
+    padding: 1rem;
+    gap: 1rem;
+}
+
+#shipyard {
+    display: flex;
+    flex: 1;
+    gap: 1rem;
+}
+
+#ship-view {
+    flex: 2;
+    background: #87CEEB;
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+}
+
+#pieces-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow-y: auto;
+    background: rgba(0,0,0,0.2);
+    border-radius: 10px;
+    padding: 0.5rem;
+}
+
+.piece {
+    width: 80px;
+    height: 40px;
+    background: #saddlebrown;
+    border: 2px solid #8B4513;
+    border-radius: 5px;
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.8rem;
+    user-select: none;
+}
+
+.piece:active {
+    cursor: grabbing;
+}
+
+#ship-view .placed-piece {
+    position: absolute;
+    background: #saddlebrown;
+    border: 2px solid #8B4513;
+}
+
+footer {
+    padding: 1rem;
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#progress {
+    font-size: 1rem;
+}
+
+#bottom-nav {
+    display: flex;
+    gap: 0.5rem;
+}
+
+button {
+    padding: 0.5rem 1rem;
+    background: #ffd700;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+button:hover {
+    background: #ffe480;
+}
+
+@media (max-width: 600px) {
+    header {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    main {
+        flex-direction: column;
+    }
+    #ship-view {
+        height: 300px;
+    }
+    #pieces-panel {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}

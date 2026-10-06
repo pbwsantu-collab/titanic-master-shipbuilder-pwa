@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Titanic Master Shipbuilder</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <header>
+            <h1>Titanic Master Shipbuilder</h1>
+            <div id="score">Score: 0</div>
+            <div id="accuracy">Accuracy: 0%</div>
+        </header>
+        <main>
+            <div id="shipyard">
+                <div id="ship-view"></div>
+                <div id="pieces-panel">
+                    <!-- Ship pieces will be dynamically generated -->
+                </div>
+            </div>
+        </main>
+        <footer>
+            <div id="progress">Progress: 0/15 pieces placed</div>
+            <nav id="bottom-nav">
+                <button id="rotate-btn">Rotate</button>
+                <button id="reset-btn">Reset</button>
+            </nav>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./service-worker.js')
+            .then(registration => console.log('SW registered'))
+            .catch(err => console.log('SW registration failed:', err));
+        });
+      }
+    </script>
+</body>
+</html>
