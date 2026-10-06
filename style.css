@@ -1,141 +1,220 @@
-/* Basic reset */
+/* Titanic Master Shipbuilder – Fixed styles */
+
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #1e3c72, #2a5298);
-    color: white;
-    height: 100vh;
-    overflow: hidden;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  color: #fff;
+  height: 100vh;
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #game-container {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
+/* Header */
 header {
-    padding: 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: rgba(0,0,0,0.3);
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.45);
+  border-bottom: 1px solid rgba(255, 215, 0, 0.3);
 }
 
 header h1 {
-    font-size: 1.5rem;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #ffd700;
 }
 
-#score, #accuracy {
-    font-size: 1rem;
+.stats {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.95rem;
 }
 
+/* Main layout */
 main {
-    flex: 1;
-    display: flex;
-    padding: 1rem;
-    gap: 1rem;
+  flex: 1;
+  padding: 0.75rem;
+  min-height: 0;
 }
 
 #shipyard {
-    display: flex;
-    flex: 1;
-    gap: 1rem;
+  display: flex;
+  height: 100%;
+  gap: 0.75rem;
 }
 
+/* Ship canvas */
 #ship-view {
-    flex: 2;
-    background: #87CEEB;
-    border-radius: 10px;
-    position: relative;
-    overflow: hidden;
+  flex: 2.2;
+  background: linear-gradient(180deg, #87CEEB 0%, #4a90a4 70%, #2c5f6e 100%);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.15);
 }
 
+/* Ghost outlines – show where pieces should go */
+.ghost {
+  position: absolute;
+  border: 2px dashed rgba(255, 255, 255, 0.55);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+/* Pieces panel */
 #pieces-panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    overflow-y: auto;
-    background: rgba(0,0,0,0.2);
-    border-radius: 10px;
-    padding: 0.5rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 12px;
+  padding: 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Individual pieces */
+.piece,
+.placed-piece {
+  background: linear-gradient(145deg, #8B5A2B, #5D3A1A);
+  border: 2px solid #3d2510;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .piece {
-    width: 80px;
-    height: 40px;
-    background: #saddlebrown;
-    border: 2px solid #8B4513;
-    border-radius: 5px;
-    cursor: grab;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 0.8rem;
-    user-select: none;
+  cursor: grab;
+  min-height: 36px;
+  flex-shrink: 0;
 }
 
-.piece:active {
-    cursor: grabbing;
+.piece:active,
+.piece.dragging {
+  cursor: grabbing;
+  opacity: 0.7;
+  transform: scale(1.05);
 }
 
-#ship-view .placed-piece {
-    position: absolute;
-    background: #saddlebrown;
-    border: 2px solid #8B4513;
+.piece.selected {
+  outline: 3px solid #ffd700;
+  outline-offset: 2px;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
 }
 
+.placed-piece {
+  position: absolute;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Footer */
 footer {
-    padding: 1rem;
-    background: rgba(0,0,0,0.3);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  padding: 0.75rem 1.25rem;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(255, 215, 0, 0.3);
 }
 
 #progress {
-    font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 #bottom-nav {
-    display: flex;
-    gap: 0.5rem;
+  display: flex;
+  gap: 0.6rem;
 }
 
 button {
-    padding: 0.5rem 1rem;
-    background: #ffd700;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-weight: bold;
+  padding: 0.55rem 1.1rem;
+  background: linear-gradient(145deg, #ffd700, #e6c200);
+  color: #1a1a1a;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s, background 0.15s;
 }
 
 button:hover {
-    background: #ffe480;
+  background: linear-gradient(145deg, #ffe44d, #ffd700);
+  transform: translateY(-1px);
 }
 
-@media (max-width: 600px) {
-    header {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-    main {
-        flex-direction: column;
-    }
-    #ship-view {
-        height: 300px;
-    }
-    #pieces-panel {
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
+button:active {
+  transform: translateY(0);
+}
+
+/* Mobile */
+@media (max-width: 700px) {
+  header {
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.6rem;
+  }
+  header h1 {
+    font-size: 1.15rem;
+  }
+  .stats {
+    gap: 1rem;
+    font-size: 0.85rem;
+  }
+  main {
+    padding: 0.5rem;
+  }
+  #shipyard {
+    flex-direction: column;
+  }
+  #ship-view {
+    height: 280px;
+    flex: none;
+  }
+  #pieces-panel {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .piece {
+    width: auto !important;
+    min-width: 70px;
+  }
+  footer {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.6rem;
+  }
 }

@@ -1,298 +1,307 @@
-// Titanic Master Shipbuilder - V1
-// Game logic
+// Titanic Master Shipbuilder - Fixed & Working V1.1
+// Core fixes:
+// 1. Syntax error in targetPositions (y= → y:)
+// 2. Proper drag-and-drop onto the ship canvas
+// 3. Visual ghost outlines so players know where pieces go
+// 4. Better piece selection + rotate behavior
+// 5. Consistent totalPieces count
+
+const TOTAL_PIECES = 12;
 
 let pieces = [];
 let placedPieces = [];
 let score = 0;
 let accuracy = 0;
-const totalPieces = 12; // between 10-15
-let selectedPiece = null;
-let offsetX = 0, offsetY = 0;
-let isRotating = false;
-let rotationAngle = 0; // 0, 90, 180, 270 degrees
+let selectedPiece = null;   // currently selected (for rotate)
+let draggedId = null;
+let offsetX = 0;
+let offsetY = 0;
 
-// Target positions for each piece (simplified grid)
+// Target positions – fixed syntax + slightly more ship-like layout
 const targetPositions = [
-    { x: 50, y: 50, width: 60, height: 30 },
-    { x: 120, y: 50, width: 60, height: 30 },
-    { x: 190, y: 50, width: 60, height: 30 },
-    { x: 50, y=100, width: 60, height: 30 },
-    { x: 120, y=100, width: 60, height: 30 },
-    { x: 190, y=100, width: 60, height: 30 },
-    { x: 50, y=150, width: 60, height: 30 },
-    { x: 120, y=150, width: 60, height: 30 },
-    { x: 190, y=150, width: 60, height: 30 },
-    { x: 50, y=200, width: 60, height: 30 },
-    { x: 120, y=200, width: 60, height: 30 },
-    { x: 190, y=200, width: 60, height: 30 }
+  // Hull bottom row
+  { x: 40,  y: 220, width: 70, height: 35, label: "Hull 1" },
+  { x: 120, y: 220, width: 70, height: 35, label: "Hull 2" },
+  { x: 200, y: 220, width: 70, height: 35, label: "Hull 3" },
+  { x: 280, y: 220, width: 70, height: 35, label: "Hull 4" },
+  // Mid decks
+  { x: 60,  y: 160, width: 80, height: 30, label: "Deck A" },
+  { x: 160, y: 160, width: 80, height: 30, label: "Deck B" },
+  { x: 260, y: 160, width: 80, height: 30, label: "Deck C" },
+  // Upper structures
+  { x: 90,  y: 110, width: 60, height: 28, label: "Super 1" },
+  { x: 170, y: 110, width: 60, height: 28, label: "Super 2" },
+  { x: 250, y: 110, width: 60, height: 28, label: "Super 3" },
+  // Funnel + mast
+  { x: 140, y: 50,  width: 40, height: 45, label: "Funnel" },
+  { x: 220, y: 40,  width: 25, height: 55, label: "Mast" }
 ];
 
-// Initialize game
 function init() {
-    loadGameState();
+  loadGameState();
+  if (pieces.length === 0) {
     createPieces();
+  }
+  renderGhosts();
+  renderPiecesPanel();
+  renderShipView();
+  updateUI();
+  setupEventListeners();
+}
+
+function createPieces() {
+  pieces = [];
+  for (let i = 0; i < TOTAL_PIECES; i++) {
+    const t = targetPositions[i];
+    pieces.push({
+      id: i,
+      width: t.width,
+      height: t.height,
+      label: t.label,
+      x: 0,
+      y: 0,
+      placed: false,
+      targetX: t.x,
+      targetY: t.y,
+      rotation: 0
+    });
+  }
+  // Shuffle so order is not obvious
+  pieces.sort(() => Math.random() - 0.5);
+}
+
+/* ---------- Rendering ---------- */
+
+function renderGhosts() {
+  const shipView = document.getElementById('ship-view');
+  // Clear previous ghosts only
+  shipView.querySelectorAll('.ghost').forEach(g => g.remove());
+
+  targetPositions.forEach((t, i) => {
+    // Only show ghost if that piece is not yet placed
+    const alreadyPlaced = placedPieces.some(p => p.id === i);
+    if (alreadyPlaced) return;
+
+    const ghost = document.createElement('div');
+    ghost.className = 'ghost';
+    ghost.style.left = `${t.x}px`;
+    ghost.style.top = `${t.y}px`;
+    ghost.style.width = `${t.width}px`;
+    ghost.style.height = `${t.height}px`;
+    ghost.dataset.targetId = i;
+    shipView.appendChild(ghost);
+  });
+}
+
+function renderPiecesPanel() {
+  const panel = document.getElementById('pieces-panel');
+  panel.innerHTML = '';
+
+  pieces.forEach(piece => {
+    if (piece.placed) return;
+
+    const el = document.createElement('div');
+    el.className = 'piece';
+    el.draggable = true;
+    el.dataset.id = piece.id;
+    el.textContent = piece.label;
+
+    // Size + rotation
+    applyPieceStyle(el, piece);
+
+    if (selectedPiece && selectedPiece.id === piece.id) {
+      el.classList.add('selected');
+    }
+
+    panel.appendChild(el);
+  });
+}
+
+function renderShipView() {
+  const shipView = document.getElementById('ship-view');
+  // Keep ghosts, remove only placed pieces
+  shipView.querySelectorAll('.placed-piece').forEach(p => p.remove());
+
+  placedPieces.forEach(piece => {
+    const el = document.createElement('div');
+    el.className = 'placed-piece';
+    el.dataset.id = piece.id;
+    el.textContent = piece.label;
+    el.style.left = `${piece.x}px`;
+    el.style.top = `${piece.y}px`;
+    applyPieceStyle(el, piece);
+    shipView.appendChild(el);
+  });
+}
+
+function applyPieceStyle(el, piece) {
+  el.style.transform = `rotate(${piece.rotation}deg)`;
+  if (piece.rotation % 180 !== 0) {
+    el.style.width = `${piece.height}px`;
+    el.style.height = `${piece.width}px`;
+  } else {
+    el.style.width = `${piece.width}px`;
+    el.style.height = `${piece.height}px`;
+  }
+}
+
+/* ---------- Drag & Drop ---------- */
+
+function setupEventListeners() {
+  const shipView = document.getElementById('ship-view');
+  const panel = document.getElementById('pieces-panel');
+
+  // --- Piece selection (click to select for rotate) ---
+  panel.addEventListener('click', (e) => {
+    const el = e.target.closest('.piece');
+    if (!el) return;
+    const id = parseInt(el.dataset.id, 10);
+    selectedPiece = pieces.find(p => p.id === id);
+    renderPiecesPanel(); // re-render to show selection highlight
+  });
+
+  // --- Drag start ---
+  panel.addEventListener('dragstart', (e) => {
+    const el = e.target.closest('.piece');
+    if (!el) return;
+    draggedId = parseInt(el.dataset.id, 10);
+    selectedPiece = pieces.find(p => p.id === draggedId);
+    offsetX = e.offsetX;
+    offsetY = e.offsetY;
+    el.classList.add('dragging');
+    e.dataTransfer.setData('text/plain', draggedId);
+    e.dataTransfer.effectAllowed = 'move';
+  });
+
+  panel.addEventListener('dragend', (e) => {
+    e.target.classList.remove('dragging');
+    draggedId = null;
+  });
+
+  // --- Allow drop on ship-view ---
+  shipView.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  });
+
+  shipView.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const id = parseInt(e.dataTransfer.getData('text/plain'), 10);
+    const piece = pieces.find(p => p.id === id);
+    if (!piece || piece.placed) return;
+
+    const rect = shipView.getBoundingClientRect();
+    let x = e.clientX - rect.left - offsetX;
+    let y = e.clientY - rect.top - offsetY;
+
+    // Snap to nearest free target
+    const snapped = snapToNearest(x, y, piece);
+    if (!snapped) return; // no free slot
+
+    piece.x = snapped.x;
+    piece.y = snapped.y;
+    piece.placed = true;
+
+    // Score based on how close to the *correct* target for this piece
+    const dist = Math.hypot(piece.x - piece.targetX, piece.y - piece.targetY);
+    const maxDist = 200; // reasonable tolerance
+    const pieceAccuracy = Math.max(0, 100 - (dist / maxDist) * 100);
+    score += pieceAccuracy;
+    placedPieces.push(piece);
+
+    renderGhosts();
     renderPiecesPanel();
     renderShipView();
     updateUI();
-    setupEventListeners();
-}
+    saveGameState();
+  });
 
-// Create ship pieces
-function createPieces() {
-    pieces = [];
-    for (let i = 0; i < totalPieces; i++) {
-        pieces.push({
-            id: i,
-            width: targetPositions[i].width,
-            height: targetPositions[i].height,
-            x: 0, // initial position in panel
-            y: 0,
-            placed: false,
-            targetX: targetPositions[i].x,
-            targetY: targetPositions[i].y,
-            rotation: 0 // 0, 90, 180, 270
-        });
+  // --- Rotate button ---
+  document.getElementById('rotate-btn').addEventListener('click', () => {
+    if (!selectedPiece || selectedPiece.placed) {
+      alert('Select an unplaced piece first (click it in the panel), then press Rotate.');
+      return;
     }
-    // Shuffle pieces for variety
-    pieces.sort(() => Math.random() - 0.5);
+    selectedPiece.rotation = (selectedPiece.rotation + 90) % 360;
+    renderPiecesPanel();
+  });
+
+  // --- Reset ---
+  document.getElementById('reset-btn').addEventListener('click', resetGame);
 }
 
-// Render pieces in the panel
-function renderPiecesPanel() {
-    const panel = document.getElementById('pieces-panel');
-    panel.innerHTML = '';
-    pieces.forEach(piece => {
-        if (!piece.placed) {
-            const el = document.createElement('div');
-            el.className = 'piece';
-            el.draggable = true;
-            el.dataset.id = piece.id;
-            el.textContent = `Piece ${piece.id + 1}`;
-            // Apply rotation
-            el.style.transform = `rotate(${piece.rotation}deg)`;
-            // Adjust size based on rotation (swap width/height for 90/270)
-            if (piece.rotation % 180 !== 0) {
-                el.style.width = `${piece.height}px`;
-                el.style.height = `${piece.width}px`;
-            } else {
-                el.style.width = `${piece.width}px`;
-                el.style.height = `${piece.height}px`;
-            }
-            panel.appendChild(el);
-        }
-    });
-    // Add drag event listeners
-    document.querySelectorAll('.piece').forEach(el => {
-        el.addEventListener('dragstart', dragStart);
-        el.addEventListener('dragover', dragOver);
-        el.addEventListener('drop', dragDrop);
-        el.addEventListener('dragend', dragEnd);
-    });
-}
+function snapToNearest(x, y, piece) {
+  let best = null;
+  let bestDist = Infinity;
 
-// Drag and drop handlers
-function dragStart(e) {
-    selectedPiece = pieces.find(p => p.id == e.target.dataset.id);
-    offsetX = e.clientX - e.target.getBoundingClientRect().left;
-    offsetY = e.clientY - e.target.getBoundingClientRect().top;
-    e.target.classList.add('dragging');
-    e.dataTransfer.setData('text/plain', selectedPiece.id);
-}
+  targetPositions.forEach((t, i) => {
+    // Skip already occupied targets
+    if (placedPieces.some(p => p.id === i)) return;
 
-function dragOver(e) {
-    e.preventDefault();
-}
-
-function dragDrop(e) {
-    e.preventDefault();
-    const pieceId = parseInt(e.dataTransfer.getData('text/plain'));
-    const piece = pieces.find(p => p.id === pieceId);
-    if (!piece.placed) {
-        const shipView = document.getElementById('ship-view');
-        const rect = shipView.getBoundingClientRect();
-        const x = e.clientX - rect.left - offsetX;
-        const y = e.clientY - rect.top - offsetY;
-        // Snap to nearest target position
-        const snapped = snapToGrid(x, y, piece.width, piece.height);
-        piece.x = snapped.x;
-        piece.y = snapped.y;
-        piece.placed = true;
-        // Calculate score based on distance from target
-        const distance = Math.sqrt(
-            Math.pow(piece.x - piece.targetX, 2) +
-            Math.pow(piece.y - piece.targetY, 2)
-        );
-        const maxDistance = Math.sqrt(Math.pow(shipView.clientWidth, 2) + Math.pow(shipView.clientHeight, 2));
-        const accuracyForPiece = Math.max(0, 100 - (distance / maxDistance) * 100);
-        score += accuracyForPiece;
-        placedPieces.push(piece);
-        renderShipView();
-        updateUI();
-        saveGameState();
+    const dist = Math.hypot(x - t.x, y - t.y);
+    if (dist < bestDist && dist < 120) { // only snap if reasonably close
+      bestDist = dist;
+      best = { x: t.x, y: t.y, targetId: i };
     }
+  });
+  return best;
 }
 
-function dragEnd(e) {
-    e.target.classList.remove('dragging');
-}
+/* ---------- UI & Persistence ---------- */
 
-// Snap to grid (target positions)
-function snapToGrid(x, y, width, height) {
-    let bestSnapped = null;
-    let bestDistance = Infinity;
-    targetPositions.forEach(target => {
-        // Check if target is already occupied? For simplicity, allow overlapping (but we mark placed)
-        const distance = Math.sqrt(
-            Math.pow(x - target.x, 2) + Math.pow(y - target.y, 2)
-        );
-        if (distance < bestDistance) {
-            bestDistance = distance;
-            bestSnapped = { x: target.x, y: target.y };
-        }
-    });
-    return bestSnapped;
-}
-
-// Render ship view with placed pieces
-function renderShipView() {
-    const shipView = document.getElementById('ship-view');
-    shipView.innerHTML = '';
-    placedPieces.forEach(piece => {
-        const el = document.createElement('div');
-        el.className = 'placed-piece';
-        el.style.left = `${piece.x}px`;
-        el.style.top = `${piece.y}px`;
-        // Apply rotation
-        el.style.transform = `rotate(${piece.rotation}deg)`;
-        // Adjust size for rotation
-        if (piece.rotation % 180 !== 0) {
-            el.style.width = `${piece.height}px`;
-            el.style.height = `${piece.width}px`;
-        } else {
-            el.style.width = `${piece.width}px`;
-            el.style.height = `${piece.height}px`;
-        }
-        el.style.background = '#saddlebrown';
-        el.style.border = '2px solid #8B4513';
-        shipView.appendChild(el);
-    });
-}
-
-// Update UI elements
 function updateUI() {
-    document.getElementById('score').textContent = `Score: Math.floor(score)`;
-    accuracy = placedPieces.length > 0 ? score / placedPieces.length : 0;
-    document.getElementById('accuracy').textContent = `Accuracy: ${Math.floor(accuracy)}%`;
-    document.getElementById('progress').textContent = `Progress: ${placedPieces.length}/${totalPieces} pieces placed`;
-    if (placedPieces.length === totalPieces) {
-        alert(`Congratulations! You built the ship!\nFinal Score: ${Math.floor(score)}\nAverage Accuracy: ${Math.floor(accuracy)}%`);
-    }
+  const placedCount = placedPieces.length;
+  accuracy = placedCount > 0 ? score / placedCount : 0;
+
+  document.getElementById('score').textContent = `Score: ${Math.floor(score)}`;
+  document.getElementById('accuracy').textContent = `Accuracy: ${Math.floor(accuracy)}%`;
+  document.getElementById('progress').textContent = `Progress: ${placedCount}/${TOTAL_PIECES} pieces placed`;
+
+  if (placedCount === TOTAL_PIECES) {
+    setTimeout(() => {
+      alert(`Congratulations! You built the Titanic!\n\nFinal Score: ${Math.floor(score)}\nAverage Accuracy: ${Math.floor(accuracy)}%`);
+    }, 300);
+  }
 }
 
-// Setup event listeners
-function setupEventListeners() {
-    // Rotate button
-    document.getElementById('rotate-btn').addEventListener('click', () => {
-        if (selectedPiece && !selectedPiece.placed) {
-            selectedPiece.rotation = (selectedPiece.rotation + 90) % 360;
-            // Update the visual of the selected piece in panel
-            const el = document.querySelector(`.piece[data-id="${selectedPiece.id}"]`);
-            if (el) {
-                el.style.transform = `rotate(${selectedPiece.rotation}deg)`;
-                // Adjust size
-                if (selectedPiece.rotation % 180 !== 0) {
-                    el.style.width = `${selectedPiece.height}px`;
-                    el.style.height = `${selectedPiece.width}px`;
-                } else {
-                    el.style.width = `${selectedPiece.width}px`;
-                    el.style.height = `${selectedPiece.height}px`;
-                }
-            }
-        }
-    });
-
-    // Reset button
-    document.getElementById('reset-btn').addEventListener('click', resetGame);
-
-    // Orbit camera simulation: allow rotating the whole ship view
-    // For simplicity, we'll add a touch/drag to rotate the ship-view container
-    const shipView = document.getElementById('ship-view');
-    let isDraggingView = false;
-    let startX = 0;
-    let viewRotation = 0;
-
-    shipView.addEventListener('mousedown', (e) => {
-        isDraggingView = true;
-        startX = e.clientX;
-    });
-
-    shipView.addEventListener('mousemove', (e) => {
-        if (!isDraggingView) return;
-        const dx = e.clientX - startX;
-        viewRotation = dx * 0.5; // sensitivity
-        shipView.style.transform = `rotateY(${viewRotation}deg)`;
-    });
-
-    shipView.addEventListener('mouseup', () => {
-        isDraggingView = false;
-    });
-
-    shipView.addEventListener('mouseleave', () => {
-        isDraggingView = false;
-    });
-
-    // Touch support
-    shipView.addEventListener('touchstart', (e) => {
-        isDraggingView = true;
-        startX = e.touches[0].clientX;
-    });
-
-    shipView.addEventListener('touchmove', (e) => {
-        if (!isDraggingView) return;
-        const dx = e.touches[0].clientX - startX;
-        viewRotation = dx * 0.5;
-        shipView.style.transform = `rotateY(${viewRotation}deg)`;
-    });
-
-    shipView.addEventListener('touchend', () => {
-        isDraggingView = false;
-    });
-}
-
-// Save game state to localStorage
 function saveGameState() {
-    const state = {
-        pieces: pieces,
-        placedPieces: placedPieces,
-        score: score,
-        accuracy: accuracy
-    };
-    localStorage.setItem('titanicShipbuilderState', JSON.stringify(state));
+  const state = {
+    pieces,
+    placedPieces,
+    score,
+    accuracy
+  };
+  localStorage.setItem('titanicShipbuilderState', JSON.stringify(state));
 }
 
-// Load game state from localStorage
 function loadGameState() {
-    const state = localStorage.getItem('titanicShipbuilderState');
-    if (state) {
-        const parsed = JSON.parse(state);
-        pieces = parsed.pieces || [];
-        placedPieces = parsed.placedPieces || [];
-        score = parsed.score || 0;
-        accuracy = parsed.accuracy || 0;
-    }
+  try {
+    const raw = localStorage.getItem('titanicShipbuilderState');
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    pieces = parsed.pieces || [];
+    placedPieces = parsed.placedPieces || [];
+    score = parsed.score || 0;
+    accuracy = parsed.accuracy || 0;
+  } catch (e) {
+    console.warn('Could not load saved state', e);
+  }
 }
 
-// Reset game
 function resetGame() {
-    if (confirm('Reset the game? All progress will be lost.')) {
-        localStorage.removeItem('titanicShipbuilderState');
-        pieces = [];
-        placedPieces = [];
-        score = 0;
-        accuracy = 0;
-        init();
-    }
+  if (!confirm('Reset the game? All progress will be lost.')) return;
+  localStorage.removeItem('titanicShipbuilderState');
+  pieces = [];
+  placedPieces = [];
+  score = 0;
+  accuracy = 0;
+  selectedPiece = null;
+  createPieces();
+  renderGhosts();
+  renderPiecesPanel();
+  renderShipView();
+  updateUI();
 }
 
-// Initialize on load
+// Start
 window.addEventListener('load', init);
